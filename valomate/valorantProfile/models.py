@@ -40,19 +40,34 @@ class Agent(models.Model):
     def __str__(self):
         return f"{self.name} - {self.category}" 
     
+class Platform(models.Model):
+    PLATFORM_CHOICES = [
+        ('PC', 'PC'),
+        ('XBOX', 'Xbox'),
+        ('PLAYSTATION', 'Playstation'),
+        ('MOBILE', 'Mobile'),
+    ]
+
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+
+    def __str__(self):
+        return f"{self.platform}"
+    
 class UserAgent(models.Model):
     """
     Class that handles the relationship between users and their preferred agents in Valorant.
-    A user can select one agent as their main agent.
+    A user can select multiple agents as their main agents, each with a unique play style.
     """
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name="user_agents")
-    
-    # Add constraints to prevent the same user from selecting the same agent multiple times
+    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, related_name="user_platforms")
+    play_style = models.CharField(max_length=500, default="", help_text="Describe your play style with this agent")
+
     class Meta:
-        unique_together = ('user', 'agent')
+        # Ensure each user-agent-play_style combination is unique
+        unique_together = ('user', 'agent', 'play_style')
         verbose_name = "User Agent"
         verbose_name_plural = "User Agents"
 
     def __str__(self):
-        return f"{self.user} - {self.agent} - {self.agent.category}"
+        return f"{self.user} - {self.agent} on {self.platform} - ({self.agent.category}) - Play Style: {self.play_style}"
