@@ -1,6 +1,6 @@
 from rest_framework import generics
 from django.contrib.auth.models import User
-from .serializers import ChangePasswordSerializer, ChangeUsernameSerializer, UserSerializer
+from .serializers import ChangePasswordSerializer, ChangeUsernameSerializer, UserProfileSerializer, UserSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import AllowAny
@@ -241,3 +241,20 @@ class VerifyEmailView(generics.GenericAPIView):
             return Response({"detail": "Email verified successfully."}, status=status.HTTP_200_OK)
         except EmailVerification.DoesNotExist:
             return Response({"detail": "Invalid verification token."}, status=status.HTTP_400_BAD_REQUEST)
+        
+class UserMeView(generics.RetrieveAPIView):
+    """
+    API view to retrieve the current logged-in user's profile data.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        # Ensure only the logged-in user's data is returned
+        return get_user_model().objects.filter(id=self.request.user.id)
+
+    def get(self, request, *args, **kwargs):
+        # Retrieve the user profile for the logged-in user
+        user = self.request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)

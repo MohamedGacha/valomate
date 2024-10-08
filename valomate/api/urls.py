@@ -1,6 +1,6 @@
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import ChangePasswordView, ChangeUsernameView, CustomTokenObtainPairView, DeleteAccountView, ForgotPasswordView, PasswordResetConfirmView, ResendVerificationEmailView, UserRegisterView, VerifyEmailView
+from .views import ChangePasswordView, ChangeUsernameView, CustomTokenObtainPairView, DeleteAccountView, ForgotPasswordView, PasswordResetConfirmView, ResendVerificationEmailView, UserMeView, UserRegisterView, VerifyEmailView
 
 urlpatterns = [
     path('register/', UserRegisterView.as_view(), name='register'),
@@ -14,6 +14,6 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('reset-password/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('delete-account/', DeleteAccountView.as_view(), name='delete-account'),
-
+    path('user/me/', UserMeView.as_view(), name='user_me'),
     path('valorant/', include('valorantProfile.urls')),
 ]

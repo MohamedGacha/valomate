@@ -1,5 +1,5 @@
 from rest_framework import generics
-from .models import Platform, Rank, Region, UserAgent
+from .models import Agent, Platform, Rank, UserAgent
 from rest_framework.response import Response
 from .serializers import RankSerializer, UserAgentBulkUpdateSerializer, UserAgentPlatformUpdateSerializer, UserAgentSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -150,3 +150,74 @@ class UpdateUserAgentRegionView(generics.UpdateAPIView):
             return Response({"error": str(e)}, status=400)
 
         return Response({"message": "Region updated successfully!", "region": str(user_agent.region)}, status=200)
+    
+class SetValorantProfileView(generics.CreateAPIView):
+    """
+    API view to allow users to set up their Valorant profile (including riot_id, region, agent, platform, play_style, and rank).
+    """
+    serializer_class = UserAgentSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        return UserAgent.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Set the user automatically for the UserAgent object
+        serializer.save(user=self.request.user)
+
+    def post(self, request, *args, **kwargs):
+        # Custom handling of the POST request for creating a Valorant profile
+        data = request.data
+
+        agent_name = data.get('agent')
+        platform_name = data.get('platform')
+        rank_name = data.get('rank')
+
+        # Validate agent
+        try:
+            agent = Agent.objects.get(name=agent_name)
+        except Agent.DoesNotExist:
+            return Response({'error': 'Agent does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate platform
+        try:
+            platform = Platform.objects.get(platform=platform_name.upper())
+        except Platform.DoesNotExist:
+            return Response({'error': 'Platform does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate rank (if provided)
+        rank = None
+        if rank_name:
+            try:
+                rank = Rank.objects.get(rank=rank_name)
+            except Rank.DoesNotExist:
+                return Response({'error': 'Rank does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # All validations passed, save the profile
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=self.request.user, agent=agent, platform=platform, rank=rank)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class ValorantMeView(generics.RetrieveAPIView):
+    """
+    API view to retrieve the current logged-in user's Valorant profile (UserAgent) data.
+    """
+    serializer_class = UserAgentSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        # Ensure only the logged-in user's UserAgent data is returned
+        return UserAgent.objects.filter(user=self.request.user)
+
+    def get(self, request, *args, **kwargs):
+        # Retrieve the first UserAgent object for the logged-in user
+        user_agent = self.get_queryset().first()
+        if not user_agent:
+            return Response({"error": "No Valorant profile found for this user."}, status=404)
+
+        serializer = self.get_serializer(user_agent)
+        return Response(serializer.data)
