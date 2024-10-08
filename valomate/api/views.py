@@ -258,3 +258,23 @@ class UserMeView(generics.RetrieveAPIView):
         user = self.request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data)
+    
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    API view to retrieve a specific user's profile data by their user ID.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+    queryset = get_user_model().objects.all()  
+    
+    def get(self, request, *args, **kwargs):
+        # Get the user ID from the URL
+        user_id = kwargs.get('user_id')
+
+        try:
+            # Retrieve the user by their ID
+            user = self.queryset.get(id=user_id)
+            serializer = self.get_serializer(user)
+            return Response(serializer.data)
+        except get_user_model().DoesNotExist:
+            return Response({"error": "User not found."}, status=404)

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PlatformUpdateView, SelectAgentsView, SetValorantProfileView, UpdateUserAgentPlatformView, UpdateUserAgentRegionView, UserAgentListUpdateView, UserAgentRankSelectView, UserRankUpdateView, ValorantMeView
+from .views import PlatformUpdateView, SelectAgentsView, SetValorantProfileView, UpdateUserAgentPlatformView, UpdateUserAgentRegionView, UserAgentDetailView, UserAgentListUpdateView, UserAgentRankSelectView, UserRankUpdateView, ValorantMeView
 
 urlpatterns = [
     path('user/agents/select/', SelectAgentsView.as_view(), name='select-agents'),
@@ -11,5 +11,6 @@ urlpatterns = [
     path('user/region/update/', UpdateUserAgentRegionView.as_view(), name='update_user_agent_region'),
     path('valorant-profile/', SetValorantProfileView.as_view(), name='set_valorant_profile'),
     path('valorant/me/', ValorantMeView.as_view(), name='valorant_me'),
+    path('valorant/<int:user_id>/', UserAgentDetailView.as_view(), name='valorant_user_detail'),
 ]
 

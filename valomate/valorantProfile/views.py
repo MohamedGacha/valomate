@@ -221,3 +221,27 @@ class ValorantMeView(generics.RetrieveAPIView):
 
         serializer = self.get_serializer(user_agent)
         return Response(serializer.data)
+    
+class UserAgentDetailView(generics.RetrieveAPIView):
+    """
+    API view to retrieve the Valorant profile data (UserAgent) for a specific user by their user ID.
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    serializer_class = UserAgentSerializer
+    queryset = UserAgent.objects.all()  # Query all user agents
+
+    def get(self, request, *args, **kwargs):
+        # Get the user ID from the URL
+        user_id = kwargs.get('user_id')
+
+        try:
+            # Retrieve the UserAgent for the given user ID
+            user_agent = self.queryset.filter(user_id=user_id).first()
+            if not user_agent:
+                return Response({"error": "UserAgent not found."}, status=404)
+
+            serializer = self.get_serializer(user_agent)
+            return Response(serializer.data)
+        except UserAgent.DoesNotExist:
+            return Response({"error": "UserAgent not found."}, status=404)
