@@ -15,5 +15,5 @@ urlpatterns = [
     path('reset-password/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('delete-account/', DeleteAccountView.as_view(), name='delete-account'),
 
-    path('valorants/', include('valorantProfile.urls')),
+    path('valorant/', include('valorantProfile.urls')),
 ]
