@@ -70,8 +70,6 @@ class Rank(models.Model):
 
     def __str__(self):
         return self.rank
-    
-from django.db import models
 
 class Region(models.Model):
     ASIA_PACIFIC = 'AP'
