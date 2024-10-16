@@ -1,9 +1,9 @@
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.forms import ValidationError
 
 class Chat(models.Model):
-    members = models.ManyToManyField(get_user_model(), related_name='chats')
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='chats')
     created_at = models.DateTimeField(auto_now_add=True)  
 
     def __str__(self):
@@ -11,7 +11,7 @@ class Chat(models.Model):
 
 class Message(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
-    sender = models.ForeignKey(get_user_model(), related_name='message_sender')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='message_sender')
     sent_at = models.DateTimeField(auto_now_add=True) 
     message = models.CharField(max_length=500)
 
@@ -20,10 +20,10 @@ class Message(models.Model):
     
 class Room(models.Model):
     description = models.CharField(max_length=500)
-    leader = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='leader_rooms')
+    leader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='leader_rooms')
     valorant_code = models.CharField(max_length=20)
     ready = models.BooleanField(default=False)
-    members = models.ManyToManyField(get_user_model(), related_name="room_members")
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="room_members")
     chat = models.ForeignKey('Chat', on_delete=models.CASCADE, related_name="linked_chat")
 
     class Meta:
