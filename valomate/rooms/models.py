@@ -39,8 +39,8 @@ class RoomDuo(Room):
 
     def clean(self):
         # Ensure the room has exactly 2 members
-        if self.members.count() != 2:
-            raise ValidationError("A Duo room must have exactly 2 members.")
+        if self.members.count() > 2:
+            raise ValidationError("A Duo room must have 2 members.")
 
 class RoomTrio(Room):
     class Meta:
@@ -49,8 +49,8 @@ class RoomTrio(Room):
 
     def clean(self):
         # Ensure the room has exactly 3 members
-        if self.members.count() != 3:
-            raise ValidationError("A Trio room must have exactly 3 members.")
+        if self.members.count() > 3:
+            raise ValidationError("A Trio room must have 3 members.")
 
 class Room5Stack(Room):
     class Meta:
@@ -59,6 +59,6 @@ class Room5Stack(Room):
 
     def clean(self):
         # Ensure the room has exactly 5 members
-        if self.members.count() != 5:
-            raise ValidationError("A 5-Stack room must have exactly 5 members.")
+        if self.members.count() > 5:
+            raise ValidationError("A 5-Stack room must have 5 members.")
 
