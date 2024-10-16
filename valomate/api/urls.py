@@ -17,4 +17,5 @@ urlpatterns = [
     path('user/me/', UserMeView.as_view(), name='user_me'),
     path('user/<int:user_id>/', UserDetailView.as_view(), name='user_detail'),
     path('valorant/', include('valorantProfile.urls')),
+    path('rooms/', include('rooms.urls')),
 ]
