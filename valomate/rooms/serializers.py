@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Room, RoomDuo, RoomTrio, Room5Stack, Chat
+from .models import JoinRequest, Room, RoomDuo, RoomTrio, Room5Stack, Chat
 
 class RoomCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -59,4 +59,16 @@ class Room5StackCreateSerializer(RoomCreateSerializer):
     def create(self, validated_data):
         # Call the parent create method to handle common behavior
         room = super().create(validated_data)
+        return room
+
+class JoinRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JoinRequest
+        fields = ['room']  # Only require the room as the sender is the logged-in user
+
+    def validate_room(self, room):
+        """Ensure that the user hasn't already sent a join request."""
+        user = self.context['request'].user
+        if JoinRequest.objects.filter(sender=user, room=room, status='pending').exists():
+            raise serializers.ValidationError("You have already requested to join this room.")
         return room

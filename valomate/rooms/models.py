@@ -11,7 +11,7 @@ class Chat(models.Model):
 
 class Message(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
-    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='message_sender')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='message_sender', on_delete=models.CASCADE)
     sent_at = models.DateTimeField(auto_now_add=True) 
     message = models.CharField(max_length=500)
 
@@ -62,3 +62,54 @@ class Room5Stack(Room):
         if self.members.count() > 5:
             raise ValidationError("A 5-Stack room must have 5 members.")
 
+class JoinRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='request_sender', on_delete=models.CASCADE)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    room = models.ForeignKey('Room', on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    is_seen = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Join request"
+        verbose_name_plural = "Join requests"
+        unique_together = ('sender', 'room')
+
+    def accept(self):
+        """Accept the request and add the sender to the room's members."""
+        if self.status == 'pending':
+            self.status = 'accepted'
+            self.save()
+
+            # Add the sender to the room's members
+            if self.room.members.count() < self.get_room_capacity():
+                self.room.members.add(self.sender)
+
+                # Delete all other pending requests from this sender
+                JoinRequest.objects.filter(sender=self.sender, status='pending').delete()
+            else:
+                raise ValidationError(f"This room is full. Maximum {self.get_room_capacity()} members allowed.")
+    
+    def reject(self):
+        """Reject the request."""
+        if self.status == 'pending':
+            self.status = 'rejected'
+            self.save()
+
+    def get_room_capacity(self):
+        """Return the capacity of the room based on the type."""
+        if isinstance(self.room, RoomDuo):
+            return 2
+        elif isinstance(self.room, RoomTrio):
+            return 3
+        elif isinstance(self.room, Room5Stack):
+            return 5
+        return None
+
+    def __str__(self):
+        return f"{self.sender} requested to join {self.room} on {self.sent_at.strftime('%Y-%m-%d %H:%M:%S')}"

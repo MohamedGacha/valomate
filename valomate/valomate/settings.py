@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'api',
     'valorantProfile',
+    'rooms',
 ]
 
 REST_FRAMEWORK = {
