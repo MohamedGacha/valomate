@@ -6,6 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import NotIsUserInAnyRoom
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+from itertools import chain
 
 class CreateRoomDuoView(generics.CreateAPIView):
     queryset = RoomDuo.objects.all()
@@ -72,8 +74,9 @@ class AcceptJoinRequestView(generics.UpdateAPIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class RejectJoinRequestView(generics.UpdateAPIView):
-    queryset = JoinRequest.objects.all()
     permission_classes = [IsAuthenticated]
+    def get_queryset(self, request, *args, **kwargs):
+        return JoinRequest.objects.filter(room__leader=request.user)
 
     def put(self, request, *args, **kwargs):
         join_request = self.get_object()
@@ -84,3 +87,63 @@ class RejectJoinRequestView(generics.UpdateAPIView):
 
         join_request.reject()  # Reject the request
         return Response({'message': 'Join request rejected.'}, status=status.HTTP_200_OK)
+    
+class GetRoomsWithFilters(APIView):
+    permission_classes = [IsAuthenticated, NotIsUserInAnyRoom]
+    def get_queryset(self):
+        # Get all RoomDuo, RoomTrio, and Room5Stack instances
+        duos = RoomDuo.objects.all()
+        trios = RoomTrio.objects.all()
+        stacks = Room5Stack.objects.all()
+
+        return duos, trios, stacks
+    
+    def get(self, request, *args, **kwargs):
+
+        duo = request.query_params.get('duo') == 'true'
+        trio = request.query_params.get('trio') == 'true'
+        stack = request.query_params.get('stack') == 'true'
+        one_to_go = request.query_params.get('last') == 'true'
+
+        # Get the corresponding room types
+        duos, trios, stacks = self.get_queryset()
+
+        # Initialize the list to hold the final rooms
+        final_rooms = []
+
+        # Filter and append based on query params
+        if duo:
+            final_rooms.extend(duos)
+        if trio:
+            final_rooms.extend(trios)
+        if stack:
+            final_rooms.extend(stacks)
+
+
+        # If 'one_to_go' is True, filter rooms that need only one more member to be full
+        if one_to_go:
+            final_rooms = [room for room in final_rooms if self.needs_one_more_member(room)]
+
+        # Sort rooms by number of members in descending order
+        sorted_rooms = sorted(
+            final_rooms,
+            key=lambda room: room.members.count(),  # Sort by the number of members
+            reverse=True  # Descending order
+        )
+
+        # Return the list of rooms in the response, sorted by number of members
+        return Response({"rooms": [room.id for room in sorted_rooms]})
+
+    
+    def needs_one_more_member(self, room):
+        """Check if the room needs one more member to be full."""
+        # Get the number of members in the room
+        num_members = room.members.count()
+
+        if isinstance(room, RoomDuo):
+            return num_members == 1  # Duo room needs 1 member
+        elif isinstance(room, RoomTrio):
+            return num_members == 2  # Trio room needs 2 members
+        elif isinstance(room, Room5Stack):
+            return num_members == 4  # 5-Stack room needs 4 members
+        return False

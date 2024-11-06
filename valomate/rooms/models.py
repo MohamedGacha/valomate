@@ -26,9 +26,6 @@ class Room(models.Model):
     members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="room_members")
     chat = models.ForeignKey('Chat', on_delete=models.CASCADE, related_name="linked_chat")
 
-    class Meta:
-        abstract = True
-
     def __str__(self):
         return f"{self.description} - Leader: {self.leader.email}"
 
