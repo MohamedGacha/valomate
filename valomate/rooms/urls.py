@@ -5,10 +5,14 @@ from .views import (
     CreateRoom5StackView,
     CreateJoinRequestView,
     AcceptJoinRequestView,
+    MessageCreateView,
+    MessageListCreateView,
     RejectJoinRequestView,
 )
 
 urlpatterns = [
+    path('chats/<int:chat_id>/send-message/', MessageCreateView.as_view(), name='send-message'),
+    path('chats/<int:chat_id>/messages/', MessageListCreateView.as_view(), name='message-list-create'),
     path('create/room/duo/', CreateRoomDuoView.as_view(), name='create_duo_room'),
     path('create/room/trio/', CreateRoomTrioView.as_view(), name='create_trio_room'),
     path('create/room/5stack/', CreateRoom5StackView.as_view(), name='create_5stack_room'),

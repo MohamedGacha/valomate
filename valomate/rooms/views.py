@@ -1,12 +1,13 @@
-from .serializers import JoinRequestSerializer, RoomDuoCreateSerializer, RoomTrioCreateSerializer, Room5StackCreateSerializer, JoinRequest
+from .serializers import JoinRequestSerializer, RoomDuoCreateSerializer, RoomTrioCreateSerializer, Room5StackCreateSerializer, JoinRequest, ChatSerializer, MessageSerializer
 from rest_framework import generics
-from .models import Room, RoomDuo, RoomTrio, Room5Stack
+from .models import Chat, Room, RoomDuo, RoomTrio, Room5Stack, Message
 from valorantProfile.permissions import HasCompleteUserAgent
 from rest_framework.permissions import IsAuthenticated
 from .permissions import NotIsUserInAnyRoom
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 from itertools import chain
 
 class CreateRoomDuoView(generics.CreateAPIView):
@@ -147,3 +148,31 @@ class GetRoomsWithFilters(APIView):
         elif isinstance(room, Room5Stack):
             return num_members == 4  # 5-Stack room needs 4 members
         return False
+    
+class MessageListCreateView(generics.ListCreateAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filter messages by chat ID, passed as a URL parameter
+        chat_id = self.kwargs['chat_id']
+        return Message.objects.filter(chat_id=chat_id)
+
+    def perform_create(self, serializer):
+        # Automatically set the sender as the logged-in user
+        serializer.save(sender=self.request.user)
+
+class MessageCreateView(generics.CreateAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        chat_id = self.kwargs['chat_id']
+        chat = Chat.objects.get(id=chat_id)
+        
+        # Check if the sender is a member of the chat
+        if self.request.user not in chat.members.all():
+            raise PermissionDenied("You are not a member of this chat.")
+
+        # Save the message with the sender and chat
+        serializer.save(sender=self.request.user, chat=chat)
