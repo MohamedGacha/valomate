@@ -22,6 +22,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.http import urlsafe_base64_decode
 
 class UserRegisterView(APIView):
+    permission_classes = [AllowAny] 
 
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
@@ -44,6 +45,8 @@ class UserRegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class CustomTokenObtainPairView(TokenObtainPairView):
+    permission_classes = [AllowAny] 
+
     def post(self, request, *args, **kwargs):
         # Safely get the username from the request data
         username = request.data.get('username')
@@ -64,6 +67,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
     
 class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny] 
+
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
         if not email:
@@ -94,6 +99,8 @@ class ForgotPasswordView(APIView):
         return Response({"detail": "Password reset link has been sent to your email."}, status=status.HTTP_200_OK)
 
 class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny] 
+
     def post(self, request, uidb64, token, *args, **kwargs):
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
@@ -135,6 +142,8 @@ class DeleteAccountView(generics.DestroyAPIView):
         return Response({"detail": "Account deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 class ResendVerificationEmailView(generics.GenericAPIView):
+    permission_classes = [AllowAny] 
+
     def post(self, request, *args, **kwargs):
         email = request.data.get("email")
         user = get_user_model().objects.filter(email=email).first()
@@ -222,6 +231,8 @@ class ChangeUsernameView(generics.UpdateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyEmailView(generics.GenericAPIView):
+    permission_classes = [AllowAny] 
+
     def get(self, request, *args, **kwargs):
         token = request.query_params.get('token')  # Get the token from query parameters
         if not token:

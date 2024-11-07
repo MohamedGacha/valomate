@@ -5,7 +5,7 @@ from .views import ChangePasswordView, ChangeUsernameView, CustomTokenObtainPair
 urlpatterns = [
     path('register/', UserRegisterView.as_view(), name='register'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify_email'),
-    path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    #path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('resend-verification-email/', ResendVerificationEmailView.as_view(), name='resend_verification_email'),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('change-username/', ChangeUsernameView.as_view(), name='change-username'),

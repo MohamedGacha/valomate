@@ -1,18 +1,22 @@
 from rest_framework import serializers
-from .models import Rank, UserAgent, Agent, Platform
+from .models import Rank, UserAgent, Agent, Platform, Region
 
 class UserAgentSerializer(serializers.ModelSerializer):
     agent = serializers.CharField()
     platform = serializers.CharField()
+    region = serializers.CharField()
+    rank = serializers.CharField()
 
     class Meta:
         model = UserAgent
         fields = ['id', 'riot_id', 'region', 'agent', 'platform', 'play_style', 'rank']
 
-    def to_internal_value(self, data):
+    def validate(self, data):
         # Look up agent by name
         agent_name = data.get('agent')
         platform_name = data.get('platform')
+        region_code = data.get('region')
+        rank_name = data.get('rank')
 
         if not agent_name:
             raise serializers.ValidationError({'agent': 'Agent name is required.'})
@@ -20,20 +24,50 @@ class UserAgentSerializer(serializers.ModelSerializer):
         if not platform_name:
             raise serializers.ValidationError({'platform': 'Platform name is required.'})
 
+        if not region_code:
+            raise serializers.ValidationError({'region': 'Region code is required.'})
+
+        if not rank_name:
+            raise serializers.ValidationError({'rank': 'Rank is required.'})
+
+        # Perform the lookups and replace the names/codes with instances
         try:
-            agent = Agent.objects.get(name=agent_name)
+            data['agent'] = Agent.objects.get(name=agent_name)
         except Agent.DoesNotExist:
             raise serializers.ValidationError({'agent': 'Agent does not exist'})
 
         try:
-            platform = Platform.objects.get(platform=platform_name.upper())
+            data['platform'] = Platform.objects.get(platform=platform_name.upper())
         except Platform.DoesNotExist:
             raise serializers.ValidationError({'platform': 'Platform does not exist'})
 
-        data['agent'] = agent.id  # Replace agent name with ID
-        data['platform'] = platform.id  # Replace platform name with ID
+        try:
+            data['region'] = Region.objects.get(code=region_code.upper())
+        except Region.DoesNotExist:
+            raise serializers.ValidationError({'region': 'Region does not exist'})
 
-        return super().to_internal_value(data)
+        try:
+            data['rank'] = Rank.objects.get(rank=rank_name.capitalize())
+        except Rank.DoesNotExist:
+            raise serializers.ValidationError({'rank': 'Rank does not exist'})
+
+        return data
+
+    def create(self, validated_data):
+        # Check for existing instance with the same unique constraint fields
+        user = validated_data.get('user')
+        agent = validated_data.get('agent')
+        play_style = validated_data.get('play_style')
+
+        # Check if an entry with the same user, agent, and play_style already exists
+        if UserAgent.objects.filter(user=user, agent=agent, play_style=play_style).exists():
+            raise serializers.ValidationError(
+                'A UserAgent with this user, agent, and play style already exists.'
+            )
+
+        # If not, create a new UserAgent instance
+        return super().create(validated_data)
+
         
     
 class UserAgentPlatformUpdateSerializer(serializers.ModelSerializer):
