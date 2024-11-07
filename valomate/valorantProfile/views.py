@@ -1,8 +1,8 @@
 from rest_framework import generics
 from rest_framework.views import APIView
-from .models import Agent, Platform, Rank, UserAgent
+from .models import Agent, Platform, Rank, Region, UserAgent
 from rest_framework.response import Response
-from .serializers import RankSerializer, UserAgentBulkUpdateSerializer, UserAgentPlatformUpdateSerializer, UserAgentSerializer
+from .serializers import AgentSerializer, PlatformSerializer, RankSerializer, RegionSerializer, UserAgentBulkUpdateSerializer, UserAgentPlatformUpdateSerializer, UserAgentSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
@@ -91,7 +91,25 @@ class UserAgentRankSelectView(generics.UpdateAPIView):
 
         return Response({"message": "Rank updated successfully!", "rank": str(rank)}, status=200)
 
+class RankChoiceView(generics.ListAPIView):
+    queryset = Rank.objects.all()
+    serializer_class = RankSerializer
+
+class PlatformChoiceView(generics.ListAPIView):
+    queryset = Platform.objects.all()
+    serializer_class = PlatformSerializer
+
+class RegionChoiceView(generics.ListAPIView):
+    queryset = Region.objects.all()
+    serializer_class = RegionSerializer
+
+class AgentChoiceView(generics.ListAPIView):
+    queryset = Agent.objects.all()
+    serializer_class = AgentSerializer
+
+
 class UserRankUpdateView(generics.UpdateAPIView):
+
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 

@@ -149,3 +149,24 @@ class RankSerializer(serializers.ModelSerializer):
         instance.rank = Rank.objects.get(rank=validated_data['rank'])
         instance.save()
         return instance
+    
+class PlatformSerializer(serializers.ModelSerializer):
+    platform = serializers.CharField()
+
+    class Meta:
+        model = Platform
+        fields = ['platform']
+
+class RegionSerializer(serializers.ModelSerializer):
+    code = serializers.CharField()
+
+    class Meta:
+        model = Region
+        fields = ['code']
+
+class AgentSerializer(serializers.ModelSerializer):
+    name = serializers.CharField()
+    category = serializers.CharField()
+    class Meta:
+        model = Agent
+        fields = ['name', 'category']
