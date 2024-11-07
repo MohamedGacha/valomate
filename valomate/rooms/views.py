@@ -1,4 +1,4 @@
-from .serializers import JoinRequestSerializer, RoomDuoCreateSerializer, RoomTrioCreateSerializer, Room5StackCreateSerializer, JoinRequest, ChatSerializer, MessageSerializer
+from .serializers import JoinRequestSerializer, RoomDuoCreateSerializer, RoomTrioCreateSerializer, RoomCreateSerializer, Room5StackCreateSerializer, JoinRequest, ChatSerializer, MessageSerializer
 from rest_framework import generics
 from .models import Chat, Room, RoomDuo, RoomTrio, Room5Stack, Message
 from valorantProfile.permissions import HasCompleteUserAgent
@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
+from django.db.models import Q
 from itertools import chain
 
 class CreateRoomDuoView(generics.CreateAPIView):
@@ -17,7 +18,17 @@ class CreateRoomDuoView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        serializer.save(leader=user, members=[user], ready=False)
+        
+        # Modify the validated data before passing it to the serializer
+        validated_data = serializer.validated_data
+
+        # Call the parent create method to handle the rest
+        serializer.save(**validated_data)
+        validated_data['room_type'] = RoomDuo.RoomType.DUO  # Set room type to DUO
+
+        # Call the parent create method to handle the rest
+        serializer.save(**validated_data)
+
 
 class CreateRoomTrioView(generics.CreateAPIView):
     queryset = RoomTrio.objects.all()
@@ -26,7 +37,16 @@ class CreateRoomTrioView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        serializer.save(leader=user, members=[user], ready=False)
+        
+        # Modify the validated data before passing it to the serializer
+        validated_data = serializer.validated_data
+
+        # Call the parent create method to handle the rest
+        serializer.save(**validated_data)
+        validated_data['room_type'] = RoomDuo.RoomType.TRIO  # Set room type to DUO
+
+        # Call the parent create method to handle the rest
+        serializer.save(**validated_data)
 
 class CreateRoom5StackView(generics.CreateAPIView):
     queryset = Room5Stack.objects.all()
@@ -35,7 +55,16 @@ class CreateRoom5StackView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        serializer.save(leader=user, members=[user], ready=False)
+        
+        # Modify the validated data before passing it to the serializer
+        validated_data = serializer.validated_data
+
+        # Call the parent create method to handle the rest
+        serializer.save(**validated_data)
+        validated_data['room_type'] = RoomDuo.RoomType.FIVE_STACK  # Set room type to DUO
+
+        # Call the parent create method to handle the rest
+        serializer.save(**validated_data)
 
 
 class CreateJoinRequestView(generics.CreateAPIView):
@@ -90,62 +119,57 @@ class RejectJoinRequestView(generics.UpdateAPIView):
         return Response({'message': 'Join request rejected.'}, status=status.HTTP_200_OK)
     
 class GetRoomsWithFilters(APIView):
-    permission_classes = [IsAuthenticated, NotIsUserInAnyRoom]
-    def get_queryset(self):
-        # Get all RoomDuo, RoomTrio, and Room5Stack instances
-        duos = RoomDuo.objects.all()
-        trios = RoomTrio.objects.all()
-        stacks = Room5Stack.objects.all()
+    permission_classes = [IsAuthenticated]
 
-        return duos, trios, stacks
-    
     def get(self, request, *args, **kwargs):
-
+        # Get query parameters
         duo = request.query_params.get('duo') == 'true'
         trio = request.query_params.get('trio') == 'true'
         stack = request.query_params.get('stack') == 'true'
         one_to_go = request.query_params.get('last') == 'true'
 
-        # Get the corresponding room types
-        duos, trios, stacks = self.get_queryset()
+        # Start with the base queryset for Room
+        queryset = Room.objects.all()
 
-        # Initialize the list to hold the final rooms
-        final_rooms = []
+        # Apply filters based on the query parameters
+        filters = Q()
 
-        # Filter and append based on query params
+        # Filter for specific room types (duo, trio, stack)
         if duo:
-            final_rooms.extend(duos)
+            filters &= Q(room_type=Room.RoomType.DUO)
         if trio:
-            final_rooms.extend(trios)
+            filters &= Q(room_type=Room.RoomType.TRIO)
         if stack:
-            final_rooms.extend(stacks)
+            filters &= Q(room_type=Room.RoomType.FIVE_STACK)
 
+        queryset = queryset.filter(filters)
 
         # If 'one_to_go' is True, filter rooms that need only one more member to be full
         if one_to_go:
-            final_rooms = [room for room in final_rooms if self.needs_one_more_member(room)]
+            queryset = [room for room in queryset if self.needs_one_more_member(room)]
 
-        # Sort rooms by number of members in descending order
+        # Sort rooms by the number of members in descending order
         sorted_rooms = sorted(
-            final_rooms,
-            key=lambda room: room.members.count(),  # Sort by the number of members
-            reverse=True  # Descending order
+            queryset,
+            key=lambda room: room.members.count(),
+            reverse=True
         )
 
-        # Return the list of rooms in the response, sorted by number of members
-        return Response({"rooms": [room.id for room in sorted_rooms]})
+        # Serialize the rooms using the RoomSerializer
+        serializer = RoomCreateSerializer(sorted_rooms, many=True)
 
-    
+        # Return the list of room data in the response
+        return Response({"rooms": serializer.data})
+
     def needs_one_more_member(self, room):
         """Check if the room needs one more member to be full."""
-        # Get the number of members in the room
         num_members = room.members.count()
 
-        if isinstance(room, RoomDuo):
+        if room.room_type == Room.RoomType.DUO:
             return num_members == 1  # Duo room needs 1 member
-        elif isinstance(room, RoomTrio):
+        elif room.room_type == Room.RoomType.TRIO:
             return num_members == 2  # Trio room needs 2 members
-        elif isinstance(room, Room5Stack):
+        elif room.room_type == Room.RoomType.FIVE_STACK:
             return num_members == 4  # 5-Stack room needs 4 members
         return False
     

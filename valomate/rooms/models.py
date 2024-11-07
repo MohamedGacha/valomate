@@ -19,15 +19,45 @@ class Message(models.Model):
         return f"Message : {self.message}"
     
 class Room(models.Model):
+
+    class RoomType(models.IntegerChoices):
+        DUO = 2, 'Duo'
+        TRIO = 3, 'Trio'
+        FIVE_STACK = 5, '5-Stack'
+
     description = models.CharField(max_length=500)
     leader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='leader_rooms')
     valorant_code = models.CharField(max_length=20)
     ready = models.BooleanField(default=False)
     members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="room_members")
     chat = models.ForeignKey('Chat', on_delete=models.CASCADE, related_name="linked_chat")
+    room_type = models.IntegerField(choices=RoomType.choices)
+
+    def kick(self, user):
+        """Kick a user from the room. If the user is the leader, assign a new leader."""
+        if user not in self.members.all():
+            raise ValidationError("User is not a member of this room.")
+
+        # If the user is the leader, assign a new leader from remaining members
+        if user == self.leader:
+            remaining_members = list(self.members.exclude(id=user.id))
+            if remaining_members:
+                # Choose the first member in the remaining list as the new leader
+                self.leader = remaining_members[0]
+                self.save()
+            else:
+                raise ValidationError("Cannot remove leader. Room must have at least one member to assign a new leader.")
+
+        # Remove the user from the room's members
+        self.members.remove(user)
+        self.save()
+
+        # If the room is empty after the kick, delete it
+        if not self.members.exists():
+            self.delete()
 
     def __str__(self):
-        return f"{self.description} - Leader: {self.leader.email}"
+        return f"{self.description} - Leader: {self.leader.username}"
 
 class RoomDuo(Room):
     class Meta:
@@ -38,6 +68,9 @@ class RoomDuo(Room):
         # Ensure the room has exactly 2 members
         if self.members.count() > 2:
             raise ValidationError("A Duo room must have 2 members.")
+        # Ensure the room_type is set to DUO
+        if self.room_type != Room.RoomType.DUO:
+            raise ValidationError("This room should be a Duo Room.")
 
 class RoomTrio(Room):
     class Meta:
@@ -48,6 +81,9 @@ class RoomTrio(Room):
         # Ensure the room has exactly 3 members
         if self.members.count() > 3:
             raise ValidationError("A Trio room must have 3 members.")
+        # Ensure the room_type is set to TRIO
+        if self.room_type != Room.RoomType.TRIO:
+            raise ValidationError("This room should be a Trio Room.")
 
 class Room5Stack(Room):
     class Meta:
@@ -58,6 +94,9 @@ class Room5Stack(Room):
         # Ensure the room has exactly 5 members
         if self.members.count() > 5:
             raise ValidationError("A 5-Stack room must have 5 members.")
+        # Ensure the room_type is set to FIVE_STACK
+        if self.room_type != Room.RoomType.FIVE_STACK:
+            raise ValidationError("This room should be a 5-Stack Room.")
 
 class JoinRequest(models.Model):
     STATUS_CHOICES = [
@@ -83,7 +122,12 @@ class JoinRequest(models.Model):
             self.status = 'accepted'
             self.save()
 
-            # Add the sender to the room's members
+            # Check if the user is already in a room and kick them out
+            current_room = self.sender.room_members.first()  # Get the first room the user is part of (if any)
+            if current_room:
+                current_room.kick(self.sender)  # Kick the user out of the current room
+            
+            # Add the sender to the new room's members
             if self.room.members.count() < self.get_room_capacity():
                 self.room.members.add(self.sender)
 

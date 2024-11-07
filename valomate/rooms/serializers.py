@@ -5,7 +5,7 @@ from .models import JoinRequest, Room, RoomDuo, RoomTrio, Room5Stack, Chat, Mess
 class RoomCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ['description', 'valorant_code']  # Exclude 'ready' from input
+        fields = ['id', 'description', 'leader', 'valorant_code', 'members', 'chat', 'room_type']
 
     def create(self, validated_data):
         """
@@ -80,6 +80,7 @@ class ChatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
         fields = ['id', 'members', 'created_at']
+
 
 # Serializer for Message
 class MessageSerializer(serializers.ModelSerializer):
